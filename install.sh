@@ -1,5 +1,9 @@
 #!/bin/bash -e
 
+#
+# Installs RPI Environd in a Debian-like environment
+#
+
 get_install_config() {
 
 	# These values are used for the install ONLY and do not alter the config.
@@ -18,15 +22,17 @@ get_install_config() {
 
 check_permissions() {
 
+	#
+	# Make sure that we either are, or can get, root.
+	# Encourage the user to not run the whole thing as root.
+	# The logic here (trying to save the user from themselves) will break
+	# functionaliy if run as root in an environment where root can't sudo.
+	#
+
 	if [ $(/usr/bin/id -u) -eq 0 ]; then
 
-		echo "This script is being run with root priviledges. This is not a"
-		echo "good idea. We will ask you to elevate permissions later, via"
-		echo "sudo."
-		echo "If you are sure about what this script does and want to"
-		echo "proceed, type \"y\"."
-		echo "The safe course of action is to type \"n\" and re-run this"
-		echo "as a regular user."
+		echo "This script is being run with root priviledges. This is not a good idea. We will ask you to elevate permissions later, via sudo."
+		echo "If you are sure about what this script does and want to proceed, type \"y\". The safe course of action is to type \"n\" and re-run this as a regular user."
 		echo ""
 
 		while true; do
@@ -41,7 +47,7 @@ check_permissions() {
 					exit 0
 					;;
 				* ) 
-					echo "Please answer 'y' for yes or 'n' for no."			>&2
+					echo "Please answer 'y' for yes or 'n' for no." >&2
 					;;
 			esac
 		done
@@ -49,19 +55,13 @@ check_permissions() {
 	else
 
 		echo "Checking your ability get root priviledges via sudo."
-		echo "You may be prompted for your password, but we are not actually"
-		echo "using elevated priviledges yet. You may need to enter your"
-		echo "password again in a few moments."
+		echo "You may be prompted for your password, but we are not actually using elevated priviledges yet. You may need to enter your password again in a few moments."
 
-		if [ $(sudo /usr/bin/id -u) -eq 0 ]; then
-
+		if [ "$(sudo /usr/bin/id -u)" == "0" ]; then
 			echo "OK"
+		else
 
-		else:
-
-			echo "Not running as root, and could not get root via sudo."	>&2
-			echo "Perhaps you should re-run this script as root, and elect"	>&2
-			echo "to continue when warned about doing so."					>&2
+			echo "Not running as root, and could not get root via sudo. Perhaps you will need to re-run this script as root, and elect to continue when warned about doing so." >&2
 			exit 1
 
 		fi
@@ -71,6 +71,12 @@ check_permissions() {
 
 check_python() {
 
+	#
+	# Check that the `python` command launches Python vervion 2.7, 
+	# and check that we can import w1thermsensor. Offer to install
+	# it via pip if not.
+	#
+
 	echo "Checking Python"
 
 	case "$(python --version 2>&1)" in
@@ -78,39 +84,65 @@ check_python() {
 			echo "OK"
 			;;
 		*"command not found"*)
-			echo "Python not found in your execution path." 				>&2
-			echo "Install Python 2.7, or if it is installed, make an alias" >&2
-			echo "or symlink so that the bare \`python\` command runs it" 	>&2
+			echo "Python not found in your execution path." >&2
+			echo "Install Python 2.7, or if it is installed, make an alias or symlink so that the bare \`python\` command runs it" 2
 			exit 1
 			;;
 		*)
-			echo "Unacceptable Python version." 							>&2
-			echo "Install Python 2.7, or if it is installed, make an alias" >&2
-			echo "or symlink so that the bare \`python\` command runs" 		>&2
-			echo "version 2.7 and not some other version." 					>&2
+			echo "Unacceptable Python version." >&2
+			echo "Install Python 2.7, or if it is installed, make an alias or symlink so that the bare \`python\` command runs version 2.7 and not some other version." >&2
 			exit 1
 			;;
 	esac
 
-	if ! $(python -c "import w1thermsensor" ); then
-		echo "Failed to import Python library 'w1thermsensor'."				>&2
-		echo "Run \`pip install w1thermsensor\` or fetch it from"			>&2
-		echo "https://github.com/timofurrer/w1thermsensor"					>&2
-		exit 1
+	if ! $(python -c "import w1thermsensor" 2> /dev/null); then
+
+		echo "Failed to import Python library 'w1thermsensor'." >&2
+
+		if ! $(pip --version 2>&1 > /dev/null); then
+
+			echo "Additionally, pip not found. To install w1thermsensor package, install (python-)pip and run \`pip install w1thermsensor\`, or download and install it manually per https://github.com/timofurrer/w1thermsensor" >&2
+
+			exit 1
+
+		else
+
+			while true; do
+				read -p "Install w1thermsensor via PIP? [y/n]: " ans
+				case $ans in
+					[Yy]* )
+						sudo pip install w1thermsensor
+						break
+						;;
+					[Nn]* ) 
+						echo "Python withermsensor package required. See https://github.com/timofurrer/w1thermsensor." >&2
+						echo "Exiting."
+						exit 0
+						;;
+					* ) 
+						echo "Please answer 'y' for yes or 'n' for no." >&2
+						;;
+				esac
+			done
+
+		fi
+
 	fi
 
 }
 
 check_clean_install() {
 
+	#
+	# Warn the user if they risk overwriting something
+	#
+
 	echo "Checking for previous installations"
 
-	if test "$(ls -A \"$1\")"; then
+	if test "$(ls -A "$install_home" 2> /dev/null)"; then
 
-		echo "The install directory ($1) is not empty - perhaps this program"
-		echo "has been installed once before? If you continue, application"
-		echo "files, including the default HTML template and default database,"
-		echo "will be overwitten." 
+		echo "The install directory ($install_home) is not empty."
+		echo "Perhaps this program has been installed once before? If you continue, application files, including the default HTML template and default database, will be overwitten." 
 
 		while true; do
 			read -p "Continue to overwrite files? [y/n]: " ans
@@ -124,32 +156,31 @@ check_clean_install() {
 					exit 0
 					;;
 				* ) 
-					echo "Please answer 'y' for yes or 'n' for no."			>&2
+					echo "Please answer 'y' for yes or 'n' for no." >&2
 					;;
 			esac
 		done
 
-		ret=1
-
 	else
 		echo "OK"
-		ret=0
 	fi
-
-	return $ret
 
 }
 
 actually_install() {
 
+	#
+	# Copy files, set permissions, & install cronjob
+	#
+
 	#install_home=$(python -c "import sys; sys.path.append(\"$script_dir\"); import config; print config.install_home;")
 
 	echo "Copying files"
 
-	sudo mkdir -p 	"$install_home/template" 	\
-					"$install_home/database"	\
-					"$(basedir \"$config\")"	\
-					"$(basedir \"$log\")"
+	sudo mkdir -p "$install_home/template" 	\
+		"$install_home/database"	\
+		"$(dirname "$config_home/.")"	\
+		"$(dirname "$log")"
 	
 	sudo cp "$install_script_dir/config.py" "$config_home"
 	sudo cp "$install_script_dir/environd.py" "$install_home"
@@ -158,9 +189,9 @@ actually_install() {
 	sudo touch "$install_home/database/temperature_readngs.json"
 	sudo touch "$log"
 
-	echo -e "Settings permissions on writable files\n"
+	echo -e "\nSettings permissions on writable files\n"
 	echo "What is the name of the user that will be running environd?"
-	echo "(if you don't know, the default option is a reasonable guess)"
+	echo -e "(if you don't know, the default option is a reasonable guess)\n"
 	while true; do
 
 		read -p "User Name [enter for $(whoami)]:" ans
@@ -178,22 +209,24 @@ actually_install() {
 			echo "OK"
 			break
 		else
-			echo "\"$environd_user\" is not a valid user on this system"	>&2
+			echo "\"$environd_user\" is not a valid user on this system" >&2
+		fi
 
 	done
 
 	echo "Settings permissions for $install_home/database"
-	sudo chown -R $environd_user "$install_home/database"
+
+	sudo chown -R $environd_user:nogroup "$install_home/database"
 	sudo chmod 750 "$install_home/database"
 	sudo chmod 640 "$install_home/database/temperature_readngs.json"
 
 	echo "Setting permissions for $log"
-	sudo chown $environd_user "$log"
+	sudo chown $environd_user:nogroup "$log"
 	sudo chmod 640 "$log"
 
-	echo "How often should we record a temperature reading? (default is 15)"
+	echo -e "\nHow often should we record a temperature reading? (default is 15)"
 	echo "(One reading takes up about 70 bytes in the database, so we can"
-	echo "store LOTS of data, even on a modext SD card)"
+	echo -e "store LOTS of data, even on a modest SD card)\n"
 
 	while true; do
 		read -p "Enter interval in minutes [15]:" ans
@@ -207,16 +240,67 @@ actually_install() {
 					read_interval=$ans
 					break
 				else
-					echo "Interval must be a whole number."					>&2
+					echo "Interval must be a whole number." >&2
+				fi
 				;;
 		esac
 	done
 
-	echo "Installing cronjob for user $environd_user"
+	# Check for an existing cronjob before installing one
+	# This would go better under check_cleck_install() but sharing data
+	# between bash functions is clumsy and I am lazy.
 
-	cat <(sudo crontab -l -u $environd_user)								\
-		<(echo "*/$read_interval 0 0 0 0 \"$install_home/environd.py\"")	\
-		| sudo crontab -u $environd_user -
+	if test "$(crontab -l -u $environd_user | grep environd)"; then
+
+		echo "Looks like there is already a cronjob for environd. Skipping job install. To change the read interval, edit this cronjob manually."
+
+	else
+
+		echo "Installing cronjob for user $environd_user"
+
+		cat <(sudo crontab -l -u $environd_user)	\
+			<(echo "*/$read_interval * * * * \"$install_home/environd.py\"")\
+			| sudo crontab -u $environd_user - > /dev/null
+	fi
+
+}
+
+print_end_info() {
+
+	#
+	# instruct user to install hardware sensor, install web server, and update www_out in config if needed
+	#
+
+	echo "Scripted install is complete!"
+	echo ""
+	echo "You must take the following additional actions:"
+	echo ""	
+	echo "  1. Connect the DS18B20 to 3.3v, 5v, and GPIO #4"
+	# this looks terrible and is probably not helpful but I like it so deal.
+	echo "
+	             ----(ground)------+
+	            /                  | 
+	        +--D  <-DS18B20        |
+	        |   \            +--+  |
+	        |    ----(3.3v)--|oo|  |
+	        |                |oo|  |
+	        |                |oo|--+
+	        +-----(GPIO #4)--|oo|   
+	                         |oo|   
+	                        --//--  
+	                        -|oo|   
+	     notch/clip side -> []oo|   
+	                        -|oo|   
+	                        --//--  
+	     "
+	echo "     This tutorial has *much* better drawings: https://learn.adafruit.com/adafruits-raspberry-pi-lesson-11-ds18b20-temperature-sensing/hardware"
+	echo ""
+	echo "  2. Install an HTTP server like lighttpd, NGINX, or Monkey."
+	echo ""
+	echo "  3. Open the Environd config file ($config_home)/config.py and make sure that the www_out file is somewhere under the document root of the web server, and that the user running environd can write to it."
+	echo ""
+	echo "End."
+	echo ""
 
 }
 
@@ -227,29 +311,10 @@ install_environd() {
 	check_python
 	check_clean_install
 	actually_install
-
-	# instruct user to install hardware sensor, install web server, and update www_out in config if needed
-
-	echo "Scripted install is complete!"
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
-	echo ""
+	print_end_info
 
 }
 
 
 install_environd
+
