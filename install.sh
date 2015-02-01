@@ -12,7 +12,9 @@ get_install_config() {
 
 	install_home="/opt/environd"
 	config_home="/etc/environd"
-	log="/var/log/environd.log"
+
+	log=$(python -c "import sys; sys.path.append(\"$script_dir\"); import config; print config.log_file;")
+	www_out=$(python -c "import sys; sys.path.append(\"$script_dir\"); import config; print config.www_out;")
 
 	# Don't change this
 
@@ -173,13 +175,12 @@ actually_install() {
 	# Copy files, set permissions, & install cronjob
 	#
 
-	#install_home=$(python -c "import sys; sys.path.append(\"$script_dir\"); import config; print config.install_home;")
-
 	echo "Copying files"
 
-	sudo mkdir -p "$install_home/template" 	\
-		"$install_home/database"	\
-		"$(dirname "$config_home/.")"	\
+	sudo mkdir -p "$install_home/template" \
+		"$install_home/database" \
+		"$(dirname "$config_home/.")" \
+		"$(dirname "$www_out")" \
 		"$(dirname "$log")"
 	
 	sudo cp "$install_script_dir/config.py" "$config_home"
@@ -188,6 +189,9 @@ actually_install() {
 	sudo cp "$install_script_dir/environd.tpl" "$install_home/template/"
 	sudo touch "$install_home/database/temperature_readngs.json"
 	sudo touch "$log"
+
+	sudo touch "$www_out"
+	sudo cp "$install_script_dir/Chart.min.js" $(dirname "$www_out")
 
 	echo -e "\nSettings permissions on writable files\n"
 	echo "What is the name of the user that will be running environd?"
@@ -215,10 +219,14 @@ actually_install() {
 	done
 
 	echo "Settings permissions for $install_home/database"
-
 	sudo chown -R $environd_user:nogroup "$install_home/database"
 	sudo chmod 750 "$install_home/database"
 	sudo chmod 640 "$install_home/database/temperature_readngs.json"
+
+	echo "Setting permissions for WWW files"
+	sudo chown $environd_user:nogroup "$www_out"
+	sudo chown $environd_user:nogroup "$(dirname "$www_out")/Chart.min.js"
+	sudo chmod 744 "$www_out" "$(dirname "$www_out")/Chart.min.js"
 
 	echo "Setting permissions for $log"
 	sudo chown $environd_user:nogroup "$log"
@@ -297,7 +305,7 @@ print_end_info() {
 	echo ""
 	echo "  2. Install an HTTP server like lighttpd, NGINX, or Monkey."
 	echo ""
-	echo "  3. Open the Environd config file ($config_home)/config.py and make sure that the www_out file is somewhere under the document root of the web server, and that the user running environd can write to it."
+	echo "  3. Open the Environd config file ($config_home)/config.py and make sure that the www_out file is somewhere under the document root of the web server, and that the user running environd can write to it. If you move the www_out file, you must also move Chart.js.min or else the pretty graph will break."
 	echo ""
 	echo "End."
 	echo ""
@@ -307,8 +315,8 @@ print_end_info() {
 install_environd() {
 
 	check_permissions
-	get_install_config
 	check_python
+	get_install_config
 	check_clean_install
 	actually_install
 	print_end_info
