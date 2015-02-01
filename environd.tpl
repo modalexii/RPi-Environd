@@ -14,7 +14,7 @@
 			</p>
 		</content>
 	</body>
-	<script src="/chart_js/Chart.min.js"></script>
+	<script src="Chart.min.js"></script>
 	<script>
 		var data = {{
 			labels: {graph_recent_xvals},
