@@ -47,7 +47,7 @@ www_out = "/var/www/environd.html"
 
 # The template to use for generating static html.
 # Must be readable by the user running environd.
-html_template = "/opt/environd/template/index.tpl"
+html_template = "/opt/environd/template/environd.tpl"
 
 # The (flat text) database file.
 # Must be writable by the user running environd, and must exist, even if empty.
