@@ -158,10 +158,10 @@ class Presentations():
 
 		def summarize_recent(self):
 			'''
-			Generate a list of x vals and a listof y valsfor the "Recent Data"
-			graph. A relatively large number of the most recent data points
-			are reduced via chunking and averaging per values set in 
-			config.py. Both datetimes and secsor readings are averaged.
+			Generate a list of x vals and a list of y vals for the "Recent 
+			Data" graph. A relatively large number of the most recent data
+			points are reduced via chunking and averaging per values set in
+			config.py. Both datetimes and sensor readings are averaged.
 			'''
 
 			# Discard data that is not "recent" as defined by
@@ -183,40 +183,68 @@ class Presentations():
 				chunks.append(recent[int(last):int(last + avg)])
 				last += avg
 
-			# `chunks` is a list of lists of lists [ [],[],[]], [[],[],[]], ]
+			# `chunks` is a list of lists of lists [ [[],[],[]], [[],[],[]], ]
 
 			x = [] # hold mean x values (to be returned)
 			y = [] # hold mean y values (to be returned)
 
-			for c in chunks:
+			try:
 
-				# c is a list of lists [ [],[],[] ]
+				for c in chunks:
 
-				c_x = [] # hold all the x values in a given chunk
-				c_y = [] # hold all the y values in a given chunk
+					# c is a list of lists [ [],[],[] ]
 
-				for t in c:
-					# t is a list (with only two elements) []
-					c_x.append(t[0])
-					c_y.append(t[1])
+					c_x = [] # hold all the x values in a given chunk
+					c_y = [] # hold all the y values in a given chunk
 
-				# get the mean of this chunk's x/y values
-				mean_c_x = Presentations.DateTimeStamps().average_stamps(c_x)
-				mean_c_y = reduce(lambda x, y: x + y, c_y) / len(c_y)
-				mean_c_y = round(mean_c_y, config.present_temp_precision)
+					for t in c:
+						# t is a list (with only two elements) []
+						c_x.append(t[0])
+						c_y.append(t[1])
 
-				# add this chunk's mean x val to the averages for all chunks
-				x.append(
-					# format the datetime as configured
-					Presentations.DateTimeStamps(
-						# this process does an inefficient number of 
-						# datetime object <-> string conversions :(
-						mean_c_x.strftime(config.datetime_func_format)
-					).present_graph_recent_x()
-				)
+					# get the mean of this chunk's x/y values
+					mean_c_x = Presentations.DateTimeStamps().average_stamps(c_x)
 
-				# add this chunk's mean y val to the averages for all chunks
-				y.append(mean_c_y)
+					mean_c_y = reduce(lambda x, y: x + y, c_y) / len(c_y)
+					mean_c_y = round(mean_c_y, config.present_temp_precision)
+
+					# add this chunk's mean x val to the means for all chunks
+					x.append(
+						# format the datetime as configured
+						Presentations.DateTimeStamps(
+							# this process does an inefficient number of 
+							# datetime object <-> string conversions :(
+							mean_c_x.strftime(config.datetime_func_format)
+						).present_graph_recent_x()
+					)
+
+					# add this chunk's mean y val to the means for all chunks
+					y.append(mean_c_y)
+
+			except TypeError as e:
+
+				e = str(e)
+
+				if e == "reduce() of empty sequence with no initial value":
+					# Happens if len(recent) < config.present_recent_reduce_to,
+					# i.e., the database is first being populated.
+					# We can't average anything yet, so just split recent in to
+					# Xs and Ys and call it a day
+					for i in recent:
+
+						x.append(
+							# format the datetime as configured
+							Presentations.DateTimeStamps(
+								i[0]
+							).present_graph_recent_x()
+						)
+
+						y.append(i[1])
+
+					log(strings.reduce_of_emptyset)
+
+				else:
+					raise
 
 			self.recent_summary = [x,y]
 
@@ -329,6 +357,8 @@ def regenerate_html(data_collections):
 	'''
 	Use `Presentations.Collections()` to populate the template located at
 	`config.html_template` and dump an html file over `config.www_out`.
+	`now` is passed so that it can be used in place of the value normally
+	returned by summarize_recent() in the event that the DB is empty.
 	'''
 
 	with open(config.html_template, 'rb') as f:
@@ -374,7 +404,7 @@ def main():
 	db.commit()
 
 	regenerate_html( 
-		Presentations().Collections( db.content ) 
+		Presentations().Collections( db.content )
 	)
 
 	log(strings.exec_end)
