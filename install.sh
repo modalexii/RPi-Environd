@@ -259,7 +259,7 @@ actually_install() {
 		echo "Installing cronjob for user $environd_user"
 
 		cat <(sudo crontab -l -u $environd_user)	\
-			<(echo "*/$read_interval * * * * \"$install_home/environd.py\"")\
+			<(echo "*/$read_interval * * * * python \"$install_home/environd.py\"")\
 			| sudo crontab -u $environd_user - > /dev/null
 	fi
 
