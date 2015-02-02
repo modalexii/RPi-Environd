@@ -51,7 +51,7 @@ html_template = "/opt/environd/template/environd.tpl"
 
 # The (flat text) database file.
 # Must be writable by the user running environd, and must exist, even if empty.
-database = "/opt/environd/database/temperature_readngs.json"
+database = "/opt/environd/database/temperature_readings.json"
 
 # The log file. Must be writable by the user running environd.
 log_file = "/var/log/environd.log"
