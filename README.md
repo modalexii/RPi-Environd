@@ -76,7 +76,7 @@ You can edit the html template to your heart's desire, with the following constr
  * "{last_point_datetime}" is where the datetime stamp associated with the most recent reading is filled in
  * "{graph_recent_xvals}" is where the valus for the graph's x-asis are filled in
  * "{graph_recent_yvals}" is where the valus for the graph's y-asis are filled in
-* All other curly braces must be doubbled, e.g., css reading, `p { color: #ccc }` must be changed to read, `p {{ color: #ccc }}`. It is probably easier to include javascipt and css form separate files.
+* All other curly braces must be doubled, e.g., css reading, `p { color: #ccc }` must be changed to read, `p {{ color: #ccc }}`. It is probably easier to include javascipt and css from separate files.
 
 To change the format of the temperature readings or datatime stamps, edit the relevant lines of `config.py`. The strings in the config follow [Python strftime behavior](https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior).
 
