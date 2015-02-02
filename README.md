@@ -78,5 +78,5 @@ To change the format of the temperature readings or datatime stamps, edit the re
 
 ## Todo
 
-The current graph is geared towards displaying "recent" data. I entend to add a 2nd gaph to display all data, or at least a much longer history. 
+The current graph is geared towards displaying "recent" data. I intend to add a 2nd gaph to display all data, or at least a much longer history. 
 
