@@ -2,6 +2,8 @@
 
 A small utility to record temperature readings from a DS18B20 sensor and present them in static HTML files.
 
+![environd example screen shot](https://cloud.githubusercontent.com/assets/3971017/5994579/e43e1cb6-aa47-11e4-8ae5-d2ec370461f5.png)
+
 ## Installation
 
 To install in a Debian-like environment (e.g., Raspbian):
@@ -36,6 +38,8 @@ After install, take a look at `/etc/environd/config.py`. There are many tweakabl
 Environd spits out a static HTML file that isn't very interesting to look at without a web server. Something small and simple like lighttpd, nginx or Monkey is recommended. You can Google your way through setting up any of these if you're unsure. 
 
 **Pay special attention to your webserver's document root!** If it is anywhere other than `/var/www/`, you will need to edit either the server config or the Environd config. See **Files & Customization**.
+
+It is also advisable to password-protect the document root with `.htaccess` files or similar, install an SSL certificate and enforce HTTPS-only, _especially_ if you plan to make the server accessible from the Internet. Consult the documentation for your web server.
 
 
 ### You also need a DS18B20 sensor!
