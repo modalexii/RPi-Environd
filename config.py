@@ -1,7 +1,3 @@
-### If you see this text, the install.sh script has not parsed this file.
-### To set up environd manually, replace all {braced text} as desired for
-### your system
-
 #
 # This is the configuration file for the RPi environd
 #

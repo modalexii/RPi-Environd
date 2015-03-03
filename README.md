@@ -2,6 +2,8 @@
 
 A small utility to record temperature readings from a DS18B20 sensor and present them in static HTML files.
 
+![environd example screen shot](https://cloud.githubusercontent.com/assets/3971017/5994579/e43e1cb6-aa47-11e4-8ae5-d2ec370461f5.png)
+
 ## Installation
 
 To install in a Debian-like environment (e.g., Raspbian):
@@ -36,6 +38,8 @@ After install, take a look at `/etc/environd/config.py`. There are many tweakabl
 Environd spits out a static HTML file that isn't very interesting to look at without a web server. Something small and simple like lighttpd, nginx or Monkey is recommended. You can Google your way through setting up any of these if you're unsure. 
 
 **Pay special attention to your webserver's document root!** If it is anywhere other than `/var/www/`, you will need to edit either the server config or the Environd config. See **Files & Customization**.
+
+It is also advisable to password-protect the document root with `.htaccess` files or similar, install an SSL certificate and enforce HTTPS-only, _especially_ if you plan to make the server accessible from the Internet. Consult the documentation for your web server.
 
 
 ### You also need a DS18B20 sensor!
@@ -72,7 +76,7 @@ You can edit the html template to your heart's desire, with the following constr
  * "{last_point_datetime}" is where the datetime stamp associated with the most recent reading is filled in
  * "{graph_recent_xvals}" is where the valus for the graph's x-asis are filled in
  * "{graph_recent_yvals}" is where the valus for the graph's y-asis are filled in
-* All other curly braces must be doubbled, e.g., css reading, `p { color: #ccc }` must be changed to read, `p {{ color: #ccc }}`. It is probably easier to include javascipt and css form separate files.
+* All other curly braces must be doubled, e.g., css reading, `p { color: #ccc }` must be changed to read, `p {{ color: #ccc }}`. It is probably easier to include javascipt and css from separate files.
 
 To change the format of the temperature readings or datatime stamps, edit the relevant lines of `config.py`. The strings in the config follow [Python strftime behavior](https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior).
 
