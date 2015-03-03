@@ -29,15 +29,15 @@ class Database:
 
 	'''
 
-	def maintain(self):
+	def maintain(self, now):
 		'''
 		Check the size of the database and rotate it if it is larger than the
 		configured maximum. Performed as lart of a `load()`. Important only 
-		with (very) large data sets because	all data is loaded in to memory. 
+		with (very) large data sets because	all data is loaded in to memory.
 
 		Currently there is no support for accessing data after it has been 
 		rotated. The "recent data" graph will appear curt for some time after 
-		a rotation until this is implemented.
+		a rotation until this is implemented. 
 		'''
 
 		try:
@@ -45,15 +45,14 @@ class Database:
 		except OSError:
 			log(
 				strings.db_missing.format(
-					f = config.database,
-					c = "%s/config.py" % environd_config_dir,
+					f = config.database
 				)
 			)
 			exit()
 
 		log(strings.db_size.format(s = str(db_size)), to_file = False)
 
-		if db_size > config.max_db_file_size * 1000:
+		if db_size > config.max_db_file_size * 100:
 
 			log(
 				strings.db_rotation.format(
@@ -62,29 +61,37 @@ class Database:
 				)
 			)
 
+			# Keep the configured datetime stamp format, but remove
+			# illegal characters
+			valid_chars = "-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+			"".join(c for c in now if c in valid_chars)
+
 			db_directory = os.path.dirname(config.database)
-			db_name = os.path.basename(config.database)
+			current_db_name = os.path.basename(config.database)
+			rotated_db_name = "{p}/hist_ending_{d}_{n}".format(
+				p = db_directory,
+				d = now,
+				n = current_db_name,
+			)
 
 			os.rename(
 				config.database, 
-				"{p}/hist_ending_{d}_{n}".format(
-					p = db_directory,
-					d = get_datetime_stamp(),
-					n = db_name
-				)
+				rotated_db_name
 			)
+
+			open(config.database, 'a').close()
 
 		else:
 
 			log(strings.no_db_maintenance, to_file = False)
 
-	def load(self):
+	def load(self, now):
 		'''
 		Fetch the contents of the database and ready a json object.
 		'''
 
 		# Mandatory maintainence - don't crash the system with huge datasets
-		self.maintain()
+		self.maintain(now)
 
 		with open(config.database, 'rb') as f:
 			try:
@@ -397,7 +404,7 @@ def main():
 	)
 
 	db = Database()
-	db.load()
+	db.load(now.strftime(config.datetime_func_format))
 	db.append(
 			get_temperature(),
 	)
